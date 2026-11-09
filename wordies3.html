@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Мнемо-сетка 5×5 — запомни 25 слов</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    color:#e8ecff;
+    background:radial-gradient(1200px 700px at 15% -10%,#1d2755 0%,#0b0e1a 60%) fixed;
+    min-height:100vh;
+  }
+  .app{
+    max-width:1300px;margin:0 auto;padding:16px;
+    display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:22px;align-items:start;
+  }
+  @media (max-width:900px){ .app{grid-template-columns:1fr} }
+
+  h1{font-size:20px;margin:0 0 12px;font-weight:700;letter-spacing:.3px}
+  h1 span{color:#6ea8ff}
+  h2{font-size:17px;margin:0 0 8px}
+  p{margin:0 0 10px;line-height:1.45;font-size:14px}
+  .muted{color:#93a0c4}
+  small{color:#8492b8}
+
+  /* ------- сетка ------- */
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:8px;
+    width:100%;
+    max-width:780px;
+  }
+  .cell-wrap{min-width:0}
+  .cell{
+    position:relative;aspect-ratio:1/1;border-radius:10px;overflow:hidden;background:#fff;
+    box-shadow:0 6px 18px rgba(0,0,0,.4), inset 0 0 0 1px rgba(0,0,0,.06);
+  }
+  .cell canvas{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
+  .cell .num{
+    position:absolute;top:3px;left:6px;font-size:11px;font-weight:800;line-height:1.3;
+    color:#4a5468;background:rgba(255,255,255,.85);border-radius:5px;padding:1px 4px;
+    pointer-events:none;user-select:none;z-index:3;
+  }
+  .grid.result-mode canvas{cursor:pointer}
+
+  /* ------- поле ввода ПОВЕРХ клетки ------- */
+  .answer-slot{
+    position:absolute;left:8px;right:8px;bottom:8px;z-index:5;
+    display:none;
+  }
+  .answer-slot.has-slot{display:block}
+  .answer-slot input{
+    width:100%;
+    font:inherit;font-size:14px;padding:7px 10px;
+    border-radius:8px;
+    border:2px solid rgba(110,168,255,.45);
+    background:transparent;
+    color:#e8ecff;
+    text-align:center;
+    outline:none;
+    transition:.15s;
+  }
+  /* плейсхолдер невидим — видна только рамка */
+  .answer-slot input::placeholder{color:transparent}
+
+  /* как только начинаешь печатать ИЛИ фокусируешься — «как раньше» */
+  .answer-slot input:not(:placeholder-shown),
+  .answer-slot input:focus{
+    border-color:rgba(110,168,255,.75);
+    background:rgba(14,20,40,.78);
+    backdrop-filter:blur(3px);
+    -webkit-backdrop-filter:blur(3px);
+  }
+  .answer-slot input:focus{
+    border-color:#6ea8ff;
+    background:rgba(14,20,40,.92);
+    box-shadow:0 0 0 3px rgba(110,168,255,.25);
+  }
+
+  /* ------- подсветка результата ------- */
+  .overlay{
+    position:absolute;inset:0;z-index:2;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    text-align:center;padding:6px;font-weight:800;line-height:1.15;
+    pointer-events:none;user-select:none;animation:fadeIn .22s ease;
+  }
+  .overlay .mark{font-size:22px;line-height:1}
+  .overlay .word{font-size:12px;font-weight:700;word-break:break-word}
+  .overlay .wrong-answer{
+    font-size:11px;opacity:.78;text-decoration:line-through;font-weight:600;
+  }
+  .overlay .correct-answer{font-size:13px;font-weight:800}
+  .overlay.ok{background:rgba(34,197,94,.62);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+  .overlay.bad{background:rgba(239,68,68,.72);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4);padding:4px}
+  .overlay.neutral{background:rgba(250,204,21,.68);color:#3b2f00}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+  /* ------- инструменты ------- */
+  .tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}
+  .tool-group{display:flex;gap:6px;align-items:center;padding:4px 8px;border-radius:12px;
+    background:rgba(255,255,255,.04);border:1px solid #2a3358}
+  .sw{width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
+  .sw.active{border-color:#fff;box-shadow:0 0 0 2px #6ea8ff}
+  .sz{width:32px;height:32px;border-radius:50%;background:transparent;border:2px solid transparent;
+      display:grid;place-items:center;cursor:pointer;padding:0}
+  .sz i{display:block;border-radius:50%;background:#cfd8f5}
+  .sz.active{border-color:#6ea8ff;background:rgba(110,168,255,.12)}
+  .tool-btn{
+    font:inherit;font-size:13px;padding:8px 12px;border-radius:10px;cursor:pointer;
+    background:#1b2240;color:#dfe6ff;border:1px solid #39456f;transition:.15s;
+  }
+  .tool-btn:hover{background:#25305a}
+  .tool-btn.active{background:#2f6bff;border-color:#2f6bff;color:#fff}
+
+  /* ------- панель ------- */
+  .panel{
+    background:rgba(23,29,52,.92);border:1px solid #2a3358;border-radius:16px;
+    padding:18px;position:sticky;top:16px;
+    box-shadow:0 14px 40px rgba(0,0,0,.45);
+  }
+  @media (max-width:900px){ .panel{position:static} }
+
+  .primary{
+    display:block;width:100%;font:inherit;font-size:15px;font-weight:700;
+    padding:13px 16px;border-radius:12px;cursor:pointer;border:0;color:#fff;
+    background:linear-gradient(180deg,#3f7dff,#2f5fe0);
+    box-shadow:0 8px 20px rgba(63,125,255,.35);margin-top:8px;transition:.15s;
+  }
+  .primary:hover{filter:brightness(1.08)}
+  .primary:active{transform:translateY(1px)}
+  .primary:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
+  .secondary{
+    display:inline-block;font:inherit;font-size:13px;padding:9px 12px;border-radius:10px;
+    cursor:pointer;background:#1b2240;color:#dfe6ff;border:1px solid #39456f;margin:8px 6px 0 0;
+  }
+  .secondary:hover{background:#25305a}
+
+  .speech-status{
+    font-size:13px;color:#9fb2e6;background:rgba(110,168,255,.08);
+    border:1px solid rgba(110,168,255,.25);border-radius:10px;padding:10px 12px;margin:10px 0;
+    font-variant-numeric:tabular-nums;
+  }
+
+  .setting{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    font-size:13px;color:#bcc8ea;background:rgba(255,255,255,.04);
+    border:1px solid #2a3358;border-radius:10px;padding:8px 10px;margin:10px 0;
+  }
+  .setting input{
+    width:90px;font:inherit;font-size:14px;padding:6px 8px;border-radius:8px;
+    background:#0e1428;border:1px solid #39456f;color:#e8ecff;outline:none;text-align:right;
+  }
+  .setting input:focus{border-color:#6ea8ff;box-shadow:0 0 0 3px rgba(110,168,255,.18)}
+
+  .recall-progress{
+    font-size:13px;color:#9fb2e6;background:rgba(255,255,255,.04);
+    border:1px solid #2a3358;border-radius:10px;padding:9px 12px;margin:10px 0;
+    font-variant-numeric:tabular-nums;
+  }
+
+  .res-row{
+    display:grid;grid-template-columns:34px 1fr 20px 1fr;gap:8px;align-items:center;
+    padding:7px 8px;border-radius:9px;font-size:14px;margin-bottom:6px;
+    cursor:pointer;transition:.12s;outline:none;
+  }
+  .res-row:hover,.res-row:focus-visible{filter:brightness(1.18);box-shadow:0 0 0 2px rgba(110,168,255,.35)}
+  .res-row.ok{background:rgba(61,220,151,.10);border:1px solid rgba(61,220,151,.28)}
+  .res-row.bad{background:rgba(255,107,107,.09);border:1px solid rgba(255,107,107,.28)}
+  .res-row .ua{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .res-row .mark{text-align:center;font-weight:800}
+  .res-row.ok .mark{color:#3ddc97}
+  .res-row.bad .mark{color:#ff6b6b}
+  .res-row .ca{color:#9fb2e6;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .score{font-size:34px;font-weight:800;letter-spacing:-1px;margin:4px 0 6px}
+  .score small{font-size:15px;font-weight:600;color:#93a0c4}
+
+  details.fallback{margin-top:12px;font-size:13px;color:#93a0c4}
+  details.fallback summary{cursor:pointer;color:#6ea8ff}
+  .wordcloud{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .wordcloud span{background:#1b2240;border:1px solid #39456f;border-radius:7px;padding:3px 7px;font-size:12px}
+  .wordcloud span b{color:#6ea8ff;margin-right:4px}
+
+  .error-box{
+    background:rgba(255,107,107,.10);border:1px solid rgba(255,107,107,.4);
+    border-radius:10px;padding:12px;color:#ffb3b3;font-size:13px;line-height:1.5;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div>
+    <h1>Мнемо-сетка <span>5×5</span></h1>
+    <div id="grid" class="grid"></div>
+    <div class="tools">
+      <div class="tool-group" id="colors"></div>
+      <div class="tool-group" id="sizes"></div>
+      <button class="tool-btn" id="eraserBtn">Ластик</button>
+      <button class="tool-btn" id="clearAllBtn">Очистить всё</button>
+    </div>
+  </div>
+
+  <aside class="panel" id="panel"></aside>
+</div>
+
+<!-- Puter.js для более качественной нейронной озвучки -->
+<script src="https://js.puter.com/v2/"></script>
+
+<script>
+/* =========================================================
+   Константы
+   ========================================================= */
+const N = 25;
+const RECALL = 10;
+
+const NUM_WORDS = ['один','два','три','четыре','пять','шесть','семь','восемь','девять','десять',
+  'одиннадцать','двенадцать','тринадцать','четырнадцать','пятнадцать','шестнадцать',
+  'семнадцать','восемнадцать','девятнадцать','двадцать','двадцать один','двадцать два',
+  'двадцать три','двадцать четыре','двадцать пять'];
+
+const COLORS = ['#111111','#e63946','#2563eb','#16a34a','#f59e0b','#9333ea','#78350f'];
+const SIZES  = [6, 12, 22];
+
+/* =========================================================
+   Состояние
+   ========================================================= */
+const state = {
+  phase: 'idle',
+  words: [],
+  recall: [],
+  answers: {},
+  auto: {},
+  manual: {},
+  pauseMs: 250
+};
+
+let WORDS = [];
+let wordsError = null;
+
+let color = '#111111';
+let brush = 10;
+let erasing = false;
+
+/* =========================================================
+   DOM
+   ========================================================= */
+const gridEl  = document.getElementById('grid');
+const panelEl = document.getElementById('panel');
+const cells   = [];
+
+/* =========================================================
+   Сетка
+   ========================================================= */
+function buildGrid(){
+  for (let i = 0; i < N; i++){
+    const wrap = document.createElement('div');
+    wrap.className = 'cell-wrap';
+    wrap.dataset.i = i;
+
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+
+    const cv = document.createElement('canvas');
+    cv.width = 400; cv.height = 400;
+
+    const num = document.createElement('div');
+    num.className = 'num';
+    num.textContent = i + 1;
+
+    const slot = document.createElement('div');
+    slot.className = 'answer-slot';
+
+    cell.append(cv, num, slot);
+    wrap.appendChild(cell);
+    gridEl.appendChild(wrap);
+
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    cells.push({ canvas: cv, ctx, cell, slot, wrap });
+  }
+}
+
+/* =========================================================
+   Рисование
+   ========================================================= */
+function cellPos(e, cv){
+  const r = cv.getBoundingClientRect();
+  return {
+    x: (e.clientX - r.left) * cv.width  / r.width,
+    y: (e.clientY - r.top)  * cv.height / r.height
+  };
+}
+
+let drawing = false, curCanvas = null, curCtx = null, lastX = 0, lastY = 0;
+function strokeColor(){ return erasing ? '#ffffff' : color; }
+function strokeWidth(){ return erasing ? Math.max(brush * 3, 24) : brush; }
+
+gridEl.addEventListener('pointerdown', (e) => {
+  // Рисовать можно только в idle и listening. В recall/result — нельзя.
+  if (state.phase !== 'idle' && state.phase !== 'listening') return;
+  const cv = e.target.closest('canvas');
+  if (!cv) return;
+  e.preventDefault();
+  drawing = true;
+  curCanvas = cv;
+  curCtx = cv.getContext('2d');
+  try { cv.setPointerCapture(e.pointerId); } catch(_) {}
+  const p = cellPos(e, cv);
+  lastX = p.x; lastY = p.y;
+  curCtx.beginPath();
+  curCtx.arc(p.x, p.y, strokeWidth() / 2, 0, Math.PI * 2);
+  curCtx.fillStyle = strokeColor();
+  curCtx.fill();
+});
+
+gridEl.addEventListener('pointermove', (e) => {
+  if (!drawing || !curCtx) return;
+  e.preventDefault();
+  const p = cellPos(e, curCanvas);
+  curCtx.beginPath();
+  curCtx.moveTo(lastX, lastY);
+  curCtx.lineTo(p.x, p.y);
+  curCtx.strokeStyle = strokeColor();
+  curCtx.lineWidth = strokeWidth();
+  curCtx.stroke();
+  lastX = p.x; lastY = p.y;
+});
+
+function endStroke(){ drawing = false; curCtx = null; curCanvas = null; }
+gridEl.addEventListener('pointerup', endStroke);
+gridEl.addEventListener('pointercancel', endStroke);
+gridEl.addEventListener('pointerleave', () => { if (drawing) endStroke(); });
+
+gridEl.addEventListener('dblclick', (e) => {
+  if (state.phase === 'result' || state.phase === 'recall') return;
+  const cv = e.target.closest('canvas');
+  if (!cv) return;
+  const idx = cells.findIndex(c => c.canvas === cv);
+  if (idx >= 0) clearCell(idx);
+});
+
+// Клик по клетке в результатах — вручную поменять ✓/✗
+gridEl.addEventListener('click', (e) => {
+  if (state.phase !== 'result') return;
+  const wrap = e.target.closest('.cell-wrap');
+  if (!wrap) return;
+  const n = +wrap.dataset.i + 1;
+  if (!state.recall.includes(n)) return;
+  state.manual[n] = !isRight(n);
+  renderOverlays();
+  renderPanel();
+});
+
+function clearCell(i){
+  const c = cells[i];
+  c.ctx.fillStyle = '#fff';
+  c.ctx.fillRect(0, 0, c.canvas.width, c.canvas.height);
+}
+function clearAllCells(){
+  for (let i = 0; i < cells.length; i++) clearCell(i);
+}
+
+/* =========================================================
+   Инструменты
+   ========================================================= */
+const colorsEl   = document.getElementById('colors');
+const sizesEl    = document.getElementById('sizes');
+const eraserBtn  = document.getElementById('eraserBtn');
+const clearAllBtn= document.getElementById('clearAllBtn');
+
+COLORS.forEach((c, i) => {
+  const b = document.createElement('button');
+  b.className = 'sw' + (i === 0 ? ' active' : '');
+  b.dataset.color = c;
+  b.style.background = c;
+  b.title = 'Цвет';
+  b.onclick = () => { color = c; erasing = false; updateToolUI(); };
+  colorsEl.appendChild(b);
+});
+
+SIZES.forEach((s, i) => {
+  const b = document.createElement('button');
+  b.className = 'sz' + (i === 1 ? ' active' : '');
+  b.dataset.size = s;
+  const dot = document.createElement('i');
+  const d = Math.max(4, s * 0.75);
+  dot.style.width = dot.style.height = d + 'px';
+  b.appendChild(dot);
+  b.title = 'Толщина';
+  b.onclick = () => { brush = s; erasing = false; updateToolUI(); };
+  sizesEl.appendChild(b);
+});
+
+eraserBtn.onclick  = () => { erasing = !erasing; updateToolUI(); };
+clearAllBtn.onclick = () => {
+  if (state.phase === 'result' || state.phase === 'recall') return;
+  if (confirm('Очистить все 25 клеток?')) clearAllCells();
+};
+
+function updateToolUI(){
+  document.querySelectorAll('.sw').forEach(el =>
+    el.classList.toggle('active', !erasing && el.dataset.color === color));
+  document.querySelectorAll('.sz').forEach(el =>
+    el.classList.toggle('active', !erasing && +el.dataset.size === brush));
+  eraserBtn.classList.toggle('active', erasing);
+}
+
+/* =========================================================
+   Загрузка словаря
+   ========================================================= */
+async function loadWords(){
+  try {
+    const r = await fetch('words.json');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const raw = await r.json();
+    WORDS = [...new Set(raw.map(w => String(w).trim().toLowerCase()).filter(Boolean))];
+    if (WORDS.length < N) throw new Error('Слишком мало слов: ' + WORDS.length);
+  } catch(e){
+    console.error('Не удалось загрузить words.json:', e);
+    wordsError = e.message;
+  }
+  renderPanel();
+}
+
+/* =========================================================
+   Озвучка — Puter.js (если есть) с откатом на Web Speech
+   ========================================================= */
+let voices = [];
+if ('speechSynthesis' in window){
+  const load = () => { voices = window.speechSynthesis.getVoices() || []; };
+  load();
+  window.speechSynthesis.onvoiceschanged = load;
+}
+function getRuVoice(){
+  return voices.find(v => /^ru/i.test(v.lang)) || voices.find(v => /ru/i.test(v.lang)) || null;
+}
+
+const usePuter = typeof puter !== 'undefined' && puter.ai && typeof puter.ai.txt2speech === 'function';
+let puterFailed = false;
+let currentAudio = null;
+let dictationAbort = false;
+
+function setSpeechStatus(txt){
+  const el = document.getElementById('speechStatus');
+  if (el) el.textContent = txt;
+}
+
+function stopSpeech(){
+  dictationAbort = true;
+  if (currentAudio){
+    try { currentAudio.pause(); } catch(_) {}
+    currentAudio = null;
+  }
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+}
+
+async function playWord(text){
+  if (usePuter && !puterFailed){
+    try {
+      const audio = await puter.ai.txt2speech(text, 'ru-RU');
+      currentAudio = audio;
+      await audio.play();
+      // Дожидаемся окончания
+      await new Promise(resolve => {
+        const done = () => { audio.removeEventListener('ended', done); audio.removeEventListener('pause', done); resolve(); };
+        audio.addEventListener('ended', done);
+        audio.addEventListener('pause', done);
+        if (audio.ended) done();
+      });
+      if (currentAudio === audio) currentAudio = null;
+      return;
+    } catch(e){
+      console.warn('Puter TTS не сработал, переключаюсь на Web Speech:', e);
+      puterFailed = true;
+    }
+  }
+  // Fallback: Web Speech API
+  return new Promise(resolve => {
+    if (!('speechSynthesis' in window)) return resolve();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang  = 'ru-RU';
+    u.rate  = 1.05;
+    u.pitch = 1;
+    u.volume = 1;
+    const v = getRuVoice();
+    if (v) u.voice = v;
+    u.onend = resolve;
+    u.onerror = resolve;
+    window.speechSynthesis.speak(u);
+  });
+}
+
+async function speakRound(){
+  stopSpeech();
+  dictationAbort = false;
+
+  if (!usePuter && !('speechSynthesis' in window)){
+    setSpeechStatus('⚠ Браузер не поддерживает озвучку. Используй «Показать слова».');
+    return;
+  }
+
+  for (let i = 0; i < N; i++){
+    if (dictationAbort) return;
+    setSpeechStatus(`${i + 1} / ${N}`);
+    await playWord(`${NUM_WORDS[i]}, ${state.words[i]}`);
+    if (dictationAbort) return;
+    if (i < N - 1) await new Promise(r => setTimeout(r, Math.max(0, state.pauseMs | 0)));
+  }
+  if (!dictationAbort) setSpeechStatus('Готово — жми «Проверить»');
+}
+
+/* =========================================================
+   Проверка ответов
+   ========================================================= */
+function norm(s){
+  return String(s || '').toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/[^а-яa-z0-9]/g, '');
+}
+function levenshtein(a, b){
+  const m = a.length, n = b.length;
+  if (!m) return n;
+  if (!n) return m;
+  let prev = Array.from({ length: n + 1 }, (_, i) => i);
+  for (let i = 1; i <= m; i++){
+    const cur = [i];
+    for (let j = 1; j <= n; j++){
+      cur[j] = Math.min(prev[j] + 1, cur[j-1] + 1, prev[j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+function isCorrect(user, correct){
+  const u = norm(user), c = norm(correct);
+  if (!u || !c) return false;
+  if (u === c) return true;
+  const d = levenshtein(u, c);
+  if (c.length >= 8) return d <= 2;
+  if (c.length >= 4) return d <= 1;
+  return false;
+}
+function isRight(n){
+  if (Object.prototype.hasOwnProperty.call(state.manual, n)) return !!state.manual[n];
+  return !!state.auto[n];
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, ch =>
+    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+}
+
+/* =========================================================
+   Логика игры
+   ========================================================= */
+function shuffle(a){
+  for (let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startRound(){
+  if (!WORDS.length) return;
+  stopSpeech();
+  state.words  = shuffle(WORDS.slice()).slice(0, N);
+  state.recall = [];
+  state.answers = {};
+  state.auto = {};
+  state.manual = {};
+  state.phase = 'listening';
+
+  clearAllCells();
+  clearSlots();
+  renderOverlays();
+  renderPanel();
+  speakRound();
+}
+
+function toRecall(){
+  stopSpeech();
+  const nums = Array.from({ length: N }, (_, i) => i + 1);
+  state.recall  = shuffle(nums).slice(0, RECALL).sort((a, b) => a - b);
+  state.answers = {};
+  state.auto    = {};
+  state.manual  = {};
+  state.phase   = 'recall';
+
+  buildRecallInputs();
+  renderPanel();
+}
+
+function checkAnswers(){
+  stopSpeech();
+  state.auto = {};
+  state.recall.forEach(n => {
+    state.auto[n] = isCorrect(state.answers[n] || '', state.words[n - 1]);
+  });
+  state.manual = {};
+  state.phase = 'result';
+
+  clearSlots();
+  renderOverlays();
+  renderPanel();
+}
+
+/* =========================================================
+   Поля ввода (поверх клеток)
+   ========================================================= */
+function clearSlots(){
+  cells.forEach(c => {
+    c.slot.innerHTML = '';
+    c.slot.classList.remove('has-slot');
+  });
+}
+
+function buildRecallInputs(){
+  clearSlots();
+
+  state.recall.forEach(n => {
+    const c = cells[n - 1];
+    c.slot.classList.add('has-slot');
+
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.autocomplete = 'off';
+    inp.autocorrect = 'off';
+    inp.spellcheck = false;
+    inp.placeholder = ' ';   // пробел — нужен для :placeholder-shown, визуально пусто
+    inp.value = state.answers[n] || '';
+    inp.dataset.n = n;
+
+    inp.addEventListener('input', () => {
+      state.answers[n] = inp.value;
+      updateRecallProgress();
+    });
+    inp.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const all = [...document.querySelectorAll('.answer-slot input')];
+      const idx = all.indexOf(inp);
+      if (idx >= 0 && idx < all.length - 1) all[idx + 1].focus();
+      else checkAnswers();
+    });
+
+    c.slot.appendChild(inp);
+  });
+
+  const first = document.querySelector('.answer-slot input');
+  if (first) first.focus({ preventScroll: true });
+}
+
+function updateRecallProgress(){
+  const el = document.getElementById('recallProgress');
+  if (!el) return;
+  const filled = state.recall.filter(n => (state.answers[n] || '').trim()).length;
+  el.textContent = `Заполнено: ${filled} из ${state.recall.length}`;
+}
+
+/* =========================================================
+   Подсветка клеток
+   ========================================================= */
+function renderOverlays(){
+  gridEl.classList.toggle('result-mode', state.phase === 'result');
+
+  cells.forEach((c, i) => {
+    const old = c.cell.querySelector('.overlay');
+    if (old) old.remove();
+
+    if (state.phase !== 'result') return;
+
+    const n = i + 1;
+    const word = state.words[i];
+    const ov = document.createElement('div');
+    ov.className = 'overlay';
+
+    if (state.recall.includes(n)){
+      const ok = isRight(n);
+      ov.classList.add(ok ? 'ok' : 'bad');
+
+      if (ok){
+        ov.innerHTML = `<span class="mark">✓</span><span class="word">${escapeHtml(word)}</span>`;
+      } else {
+        const userAnswer = (state.answers[n] || '').trim() || '—';
+        ov.innerHTML = `
+          <span class="mark">✗</span>
+          <span class="wrong-answer">${escapeHtml(userAnswer)}</span>
+          <span class="correct-answer">${escapeHtml(word)}</span>
+        `;
+      }
+    } else {
+      ov.classList.add('neutral');
+      ov.innerHTML = `<span class="word">${escapeHtml(word)}</span>`;
+    }
+
+    c.cell.appendChild(ov);
+  });
+}
+
+/* =========================================================
+   Панель
+   ========================================================= */
+function renderPanel(){
+  if (state.phase === 'idle')      return renderIdle();
+  if (state.phase === 'listening') return renderListening();
+  if (state.phase === 'recall')    return renderRecall();
+  if (state.phase === 'result')    return renderResult();
+}
+
+function pauseControlHtml(){
+  return `<label class="setting">Пауза между словами
+    <input id="pauseInput" type="number" min="0" max="3000" step="50" value="${state.pauseMs}"> мс</label>`;
+}
+function attachPauseControl(){
+  const inp = document.getElementById('pauseInput');
+  if (!inp) return;
+  inp.addEventListener('input', () => {
+    let v = parseInt(inp.value, 10);
+    if (isNaN(v)) v = 0;
+    state.pauseMs = Math.max(0, Math.min(3000, v));
+  });
+  inp.addEventListener('blur', () => { inp.value = state.pauseMs; });
+}
+
+function renderIdle(){
+  if (wordsError){
+    panelEl.innerHTML = `
+      <h2>Не удалось загрузить словарь</h2>
+      <div class="error-box">
+        <p><b>${escapeHtml(wordsError)}</b></p>
+        <p>Убедитесь, что файл <code>words.json</code> лежит рядом с <code>index.html</code>.</p>
+        <p>Локально <code>fetch()</code> не работает по <code>file://</code> — используйте локальный сервер
+           (Live Server в VS Code или <code>python -m http.server</code>) либо откройте на GitHub Pages.</p>
+      </div>
+    `;
+    return;
+  }
+  if (!WORDS.length){
+    panelEl.innerHTML = `<h2>Загрузка словаря…</h2>`;
+    return;
+  }
+
+  panelEl.innerHTML = `
+    <h2>Готов?</h2>
+    <p class="muted">Правила:</p>
+    <p>
+      1. Жми «Начать раунд».<br>
+      2. Комп называет <b>25 слов</b> — по одному на клетку (1…25).<br>
+      3. Пока он говорит — <b>рисуй подсказки</b> в клетках.<br>
+      4. Потом покажут <b>10 случайных номеров</b> — впиши слова прямо поверх клеток.
+    </p>
+    ${pauseControlHtml()}
+    <p class="muted">Слов в словаре: <b>${WORDS.length}</b>
+      ${usePuter ? ' · 🎙 нейро-озвучка' : ''}</p>
+    <button class="primary" id="startBtn">▶ Начать раунд</button>
+    <small>Совет: рисуй ассоциации, а не сами предметы — так запоминается лучше.</small>
+  `;
+  document.getElementById('startBtn').onclick = startRound;
+  attachPauseControl();
+}
+
+function renderListening(){
+  const cloud = state.words.map((w, i) => `<span><b>${i + 1}</b>${escapeHtml(w)}</span>`).join('');
+  panelEl.innerHTML = `
+    <h2>Слушай и рисуй</h2>
+    <p class="muted">Слова идут по порядку: «один — дерево, два — монета…». Успевай рисовать в клетках.</p>
+    <div class="speech-status" id="speechStatus">0 / ${N}</div>
+    ${pauseControlHtml()}
+    <button class="primary" id="toRecallBtn">Готово → к проверке</button>
+    <button class="secondary" id="replayBtn">🔊 Повторить</button>
+    <button class="secondary" id="stopBtn">⏹ Стоп</button>
+    <details class="fallback">
+      <summary>Нет звука? Показать слова</summary>
+      <div class="wordcloud">${cloud}</div>
+    </details>
+  `;
+  document.getElementById('toRecallBtn').onclick = toRecall;
+  document.getElementById('replayBtn').onclick   = speakRound;
+  document.getElementById('stopBtn').onclick     = () => { stopSpeech(); setSpeechStatus('Остановлено'); };
+  attachPauseControl();
+}
+
+function renderRecall(){
+  panelEl.innerHTML = `
+    <h2>Вспомни слова</h2>
+    <p class="muted">Смотри на свои рисунки и впиши слова прямо поверх клеток.</p>
+    <div class="recall-progress" id="recallProgress"></div>
+    <button class="primary" id="checkBtn">Проверить</button>
+    <small>Enter — следующее поле (на последнем — проверка).</small>
+  `;
+  document.getElementById('checkBtn').onclick = checkAnswers;
+  updateRecallProgress();
+}
+
+function renderResult(){
+  const total = state.recall.length;
+  const score = state.recall.filter(isRight).length;
+
+  const rows = state.recall.map(n => {
+    const correct = state.words[n - 1];
+    const user    = (state.answers[n] || '').trim();
+    const ok      = isRight(n);
+    return `
+      <div class="res-row ${ok ? 'ok' : 'bad'}" data-n="${n}" role="button" tabindex="0"
+           title="Клик — исправить результат">
+        <span class="rn">${n}</span>
+        <span class="ua">${user ? escapeHtml(user) : '<i class="muted">—</i>'}</span>
+        <span class="mark">${ok ? '✓' : '✗'}</span>
+        <span class="ca">${escapeHtml(correct)}</span>
+      </div>`;
+  }).join('');
+
+  const cloud = state.words.map((w, i) => `<span><b>${i + 1}</b>${escapeHtml(w)}</span>`).join('');
+
+  panelEl.innerHTML = `
+    <h2>Результат</h2>
+    <div class="score">${score} <small>из ${total}</small></div>
+    <p class="muted" style="font-size:13px">Клик по строке или по клетке — вручную исправить ✓/✗ (защита от опечаток).</p>
+    <div>${rows}</div>
+    <button class="primary" id="startBtn">▶ Новый раунд</button>
+    <details class="fallback">
+      <summary>Показать все 25 слов раунда</summary>
+      <div class="wordcloud">${cloud}</div>
+    </details>
+  `;
+  document.getElementById('startBtn').onclick = startRound;
+
+  panelEl.querySelectorAll('.res-row').forEach(row => {
+    const n = +row.dataset.n;
+    const toggle = () => {
+      state.manual[n] = !isRight(n);
+      renderOverlays();
+      renderPanel();
+    };
+    row.addEventListener('click', toggle);
+    row.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggle(); }
+    });
+  });
+}
+
+/* =========================================================
+   Старт
+   ========================================================= */
+buildGrid();
+updateToolUI();
+renderPanel();      // сначала «Загрузка словаря…»
+loadWords();        // затем — рендер с реальным содержимым
+</script>
+</body>
+</html>
