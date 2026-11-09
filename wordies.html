@@ -15,72 +15,77 @@
     min-height:100vh;
   }
   .app{
-    max-width:1300px;margin:0 auto;padding:16px;
-    display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:22px;align-items:start;
+    max-width:760px;margin:0 auto;padding:16px;
+    display:flex;flex-direction:column;align-items:center;gap:14px;
   }
-  @media (max-width:900px){ .app{grid-template-columns:1fr} }
 
-  h1{font-size:20px;margin:0 0 12px;font-weight:700;letter-spacing:.3px}
+  h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.3px;text-align:center;width:100%}
   h1 span{color:#6ea8ff}
-  h2{font-size:17px;margin:0 0 8px}
-  p{margin:0 0 10px;line-height:1.45;font-size:14px}
+  h2{font-size:15px;margin:0 0 6px}
+  p{margin:0 0 8px;line-height:1.45;font-size:13px}
   .muted{color:#93a0c4}
   small{color:#8492b8}
 
   /* ------- управление видом ------- */
   .view-controls{
-    display:flex;flex-wrap:wrap;gap:10px;align-items:center;
-    margin-bottom:12px;
+    width:100%;max-width:700px;
+    display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;
   }
   .carousel-nav{
-    display:none;align-items:center;gap:6px;
+    display:none;align-items:center;gap:4px;
     background:rgba(255,255,255,.04);border:1px solid #2a3358;
-    border-radius:10px;padding:4px 6px;
+    border-radius:10px;padding:3px 5px;
   }
   .carousel-nav.visible{display:flex}
   .nav-btn{
-    width:32px;height:32px;border-radius:8px;
+    width:30px;height:30px;border-radius:7px;
     background:#1b2240;border:1px solid #39456f;color:#dfe6ff;
-    font:inherit;font-size:16px;cursor:pointer;padding:0;
+    font:inherit;font-size:15px;cursor:pointer;padding:0;
     transition:.15s;
   }
   .nav-btn:hover{background:#25305a}
   .nav-btn:disabled{opacity:.3;cursor:not-allowed}
   #currentCellLabel{
-    font-size:13px;color:#bcc8ea;font-variant-numeric:tabular-nums;
-    min-width:56px;text-align:center;padding:6px 8px;border-radius:6px;
+    font-size:12px;color:#bcc8ea;font-variant-numeric:tabular-nums;
+    min-width:54px;text-align:center;padding:5px 6px;border-radius:5px;
     cursor:pointer;user-select:none;transition:.12s;
   }
   #currentCellLabel:hover{background:rgba(110,168,255,.12);color:#e8ecff}
-  .view-hint{font-size:12px;color:#7c8db8}
+  .view-hint{font-size:11px;color:#7c8db8;width:100%;text-align:center}
 
-  /* ------- сетка ------- */
+  /* ------- сцена карусели с клиппингом ------- */
+  .carousel-stage{
+    position:relative;
+    width:100%;
+    max-width:700px;
+    aspect-ratio:1/1;
+    overflow:hidden;
+    border-radius:14px;
+    background:radial-gradient(ellipse at center, rgba(63,125,255,.06) 0%, rgba(15,20,40,.35) 70%);
+  }
+
+  /* ------- сетка/карусель ------- */
   .grid{
+    width:100%;
+    height:100%;
+  }
+  .grid:not(.carousel){
     display:grid;
     grid-template-columns:repeat(5,1fr);
     gap:8px;
-    width:100%;
-    max-width:780px;
   }
-
-  /* ------- карусель (один квадрат) ------- */
   .grid.carousel{
     display:block;
     position:relative;
-    aspect-ratio:1/1;
-    max-width:900px;
-    overflow:visible;
   }
+
+  /* карусель: только текущая клетка + полоски соседей */
   .grid.carousel .cell-wrap{
     position:absolute;
     top:50%;
     transform:translateY(-50%);
     width:84%;
-    transition:
-      left 0.28s cubic-bezier(.4,0,.2,1),
-      opacity 0.28s ease,
-      filter 0.28s ease;
-    cursor:pointer;
+    transition:left 0.3s cubic-bezier(.4,0,.2,1), opacity 0.3s ease, filter 0.3s ease;
   }
   .grid.carousel .cell-wrap.current{
     left:8%;
@@ -90,29 +95,24 @@
   .grid.carousel .cell-wrap.prev{
     left:-76%;
     z-index:1;
-    opacity:0.55;
+    opacity:0.6;
     filter:brightness(0.85);
+    cursor:pointer;
   }
   .grid.carousel .cell-wrap.next{
     left:92%;
     z-index:1;
-    opacity:0.55;
+    opacity:0.6;
     filter:brightness(0.85);
+    cursor:pointer;
   }
-  .grid.carousel .cell-wrap.hidden{
-    display:none;
-  }
-  .grid.carousel .cell-wrap:not(.current) canvas{
-    pointer-events:none;
-  }
-  .grid.carousel .cell-wrap:not(.current) .answer-slot{
-    pointer-events:none;
-    opacity:0.4;
-  }
+  .grid.carousel .cell-wrap.hidden{display:none}
+  .grid.carousel .cell-wrap:not(.current) canvas{pointer-events:none}
+  .grid.carousel .cell-wrap:not(.current) .answer-slot{display:none}
   .grid.carousel .cell-wrap.current .cell{
     box-shadow:
       0 10px 30px rgba(0,0,0,.55),
-      0 0 0 2px rgba(110,168,255,.65),
+      0 0 0 2px rgba(110,168,255,.7),
       inset 0 0 0 1px rgba(0,0,0,.06);
   }
 
@@ -183,17 +183,21 @@
   .grid.carousel .overlay .correct-answer{font-size:20px}
 
   /* ------- инструменты ------- */
-  .tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}
-  .tool-group{display:flex;gap:6px;align-items:center;padding:4px 8px;border-radius:12px;
+  .tools{
+    width:100%;max-width:700px;
+    display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;
+    padding-top:4px;
+  }
+  .tool-group{display:flex;gap:5px;align-items:center;padding:3px 7px;border-radius:10px;
     background:rgba(255,255,255,.04);border:1px solid #2a3358}
-  .sw{width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
+  .sw{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
   .sw.active{border-color:#fff;box-shadow:0 0 0 2px #6ea8ff}
-  .sz{width:32px;height:32px;border-radius:50%;background:transparent;border:2px solid transparent;
+  .sz{width:28px;height:28px;border-radius:50%;background:transparent;border:2px solid transparent;
       display:grid;place-items:center;cursor:pointer;padding:0}
   .sz i{display:block;border-radius:50%;background:#cfd8f5}
   .sz.active{border-color:#6ea8ff;background:rgba(110,168,255,.12)}
   .tool-btn{
-    font:inherit;font-size:13px;padding:8px 12px;border-radius:10px;cursor:pointer;
+    font:inherit;font-size:12px;padding:6px 10px;border-radius:9px;cursor:pointer;
     background:#1b2240;color:#dfe6ff;border:1px solid #39456f;transition:.15s;
   }
   .tool-btn:hover{background:#25305a}
@@ -201,15 +205,25 @@
 
   /* ------- панель ------- */
   .panel{
-    background:rgba(23,29,52,.92);border:1px solid #2a3358;border-radius:16px;
-    padding:18px;position:sticky;top:16px;
+    width:100%;max-width:700px;
+    background:rgba(23,29,52,.92);border:1px solid #2a3358;border-radius:14px;
+    padding:14px 16px;
     box-shadow:0 14px 40px rgba(0,0,0,.45);
   }
-  @media (max-width:900px){ .panel{position:static} }
+
+  .panel-controls{
+    display:flex;flex-wrap:wrap;gap:10px;margin:10px 0;
+  }
+  .panel-controls .setting{
+    flex:0 1 auto;
+    width:auto;
+    min-width:220px;
+    margin:0;
+  }
 
   .primary{
     display:block;width:100%;font:inherit;font-size:15px;font-weight:700;
-    padding:13px 16px;border-radius:12px;cursor:pointer;border:0;color:#fff;
+    padding:12px 16px;border-radius:11px;cursor:pointer;border:0;color:#fff;
     background:linear-gradient(180deg,#3f7dff,#2f5fe0);
     box-shadow:0 8px 20px rgba(63,125,255,.35);margin-top:8px;transition:.15s;
   }
@@ -217,69 +231,67 @@
   .primary:active{transform:translateY(1px)}
   .primary:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
   .secondary{
-    display:inline-block;font:inherit;font-size:13px;padding:9px 12px;border-radius:10px;
-    cursor:pointer;background:#1b2240;color:#dfe6ff;border:1px solid #39456f;margin:8px 6px 0 0;
+    display:inline-block;font:inherit;font-size:12px;padding:8px 11px;border-radius:9px;
+    cursor:pointer;background:#1b2240;color:#dfe6ff;border:1px solid #39456f;margin:6px 4px 0 0;
   }
   .secondary:hover{background:#25305a}
 
   .speech-status{
     font-size:13px;color:#9fb2e6;background:rgba(110,168,255,.08);
-    border:1px solid rgba(110,168,255,.25);border-radius:10px;padding:10px 12px;margin:10px 0;
+    border:1px solid rgba(110,168,255,.25);border-radius:10px;padding:9px 12px;margin:8px 0;
     font-variant-numeric:tabular-nums;
   }
 
   .setting{
     display:flex;align-items:center;justify-content:space-between;gap:10px;
-    font-size:13px;color:#bcc8ea;background:rgba(255,255,255,.04);
-    border:1px solid #2a3358;border-radius:10px;padding:8px 10px;margin:10px 0;
+    font-size:12px;color:#bcc8ea;background:rgba(255,255,255,.04);
+    border:1px solid #2a3358;border-radius:10px;padding:7px 10px;
   }
   .setting input{
-    width:110px;font:inherit;font-size:14px;padding:6px 8px;border-radius:8px;
+    width:100px;font:inherit;font-size:13px;padding:5px 8px;border-radius:7px;
     background:#0e1428;border:1px solid #39456f;color:#e8ecff;outline:none;text-align:right;
     font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
   }
   .setting input:focus{border-color:#6ea8ff;box-shadow:0 0 0 3px rgba(110,168,255,.18)}
-
   .setting select{
-    font:inherit;font-size:13px;padding:6px 8px;border-radius:8px;
+    font:inherit;font-size:12px;padding:5px 8px;border-radius:7px;
     background:#0e1428;border:1px solid #39456f;color:#e8ecff;outline:none;
-    cursor:pointer;min-width:180px;
+    cursor:pointer;min-width:150px;
   }
   .setting select:focus{border-color:#6ea8ff;box-shadow:0 0 0 3px rgba(110,168,255,.18)}
   .setting select option{background:#0e1428;color:#e8ecff}
 
   .tts-hint{
-    margin:-4px 0 10px;font-size:12px;color:#8ba0cf;line-height:1.4;
-    padding:0 2px;
+    margin:2px 0 8px;font-size:11px;color:#8ba0cf;line-height:1.4;
   }
 
   .seed-box{
-    margin:12px 0;padding:12px;background:rgba(110,168,255,.06);
-    border:1px solid rgba(110,168,255,.22);border-radius:12px;
+    margin:10px 0;padding:10px 12px;background:rgba(110,168,255,.06);
+    border:1px solid rgba(110,168,255,.22);border-radius:11px;
   }
-  .seed-box .setting{margin:0 0 8px;padding:0;background:transparent;border:0}
-  .seed-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .seed-box .setting{margin:0 0 6px;padding:0;background:transparent;border:0}
+  .seed-actions{display:flex;gap:6px;flex-wrap:wrap}
   .seed-actions .secondary{margin:0}
-  .seed-hint{display:block;margin-top:8px;font-size:12px;color:#8ba0cf;line-height:1.4}
+  .seed-hint{display:block;margin-top:6px;font-size:11px;color:#8ba0cf;line-height:1.4}
 
   .seed-display{
-    font-size:12px;color:#93a0c4;margin-top:12px;padding:7px 10px;
-    background:rgba(110,168,255,.06);border-radius:8px;
+    font-size:12px;color:#93a0c4;margin-top:10px;padding:6px 10px;
+    background:rgba(110,168,255,.06);border-radius:7px;
   }
   .seed-display code{
-    color:#6ea8ff;background:rgba(110,168,255,.14);padding:1px 7px;border-radius:4px;
-    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
+    color:#6ea8ff;background:rgba(110,168,255,.14);padding:1px 6px;border-radius:4px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;
   }
 
   .recall-progress{
     font-size:13px;color:#9fb2e6;background:rgba(255,255,255,.04);
-    border:1px solid #2a3358;border-radius:10px;padding:9px 12px;margin:10px 0;
+    border:1px solid #2a3358;border-radius:10px;padding:8px 12px;margin:8px 0;
     font-variant-numeric:tabular-nums;
   }
 
   .res-row{
-    display:grid;grid-template-columns:34px 1fr 20px 1fr;gap:8px;align-items:center;
-    padding:7px 8px;border-radius:9px;font-size:14px;margin-bottom:6px;
+    display:grid;grid-template-columns:30px 1fr 20px 1fr;gap:8px;align-items:center;
+    padding:6px 8px;border-radius:8px;font-size:13px;margin-bottom:5px;
     cursor:pointer;transition:.12s;outline:none;
   }
   .res-row:hover,.res-row:focus-visible{filter:brightness(1.18);box-shadow:0 0 0 2px rgba(110,168,255,.35)}
@@ -289,14 +301,14 @@
   .res-row .mark{text-align:center;font-weight:800}
   .res-row.ok .mark{color:#3ddc97}
   .res-row.bad .mark{color:#ff6b6b}
-  .res-row .ca{color:#9fb2e6;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .score{font-size:34px;font-weight:800;letter-spacing:-1px;margin:4px 0 6px}
-  .score small{font-size:15px;font-weight:600;color:#93a0c4}
+  .res-row .ca{color:#9fb2e6;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .score{font-size:30px;font-weight:800;letter-spacing:-1px;margin:2px 0 8px}
+  .score small{font-size:14px;font-weight:600;color:#93a0c4}
 
-  details.fallback{margin-top:12px;font-size:13px;color:#93a0c4}
+  details.fallback{margin-top:10px;font-size:12px;color:#93a0c4}
   details.fallback summary{cursor:pointer;color:#6ea8ff}
-  .wordcloud{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-  .wordcloud span{background:#1b2240;border:1px solid #39456f;border-radius:7px;padding:3px 7px;font-size:12px}
+  .wordcloud{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+  .wordcloud span{background:#1b2240;border:1px solid #39456f;border-radius:6px;padding:2px 6px;font-size:11px}
   .wordcloud span b{color:#6ea8ff;margin-right:4px}
 
   .error-box{
@@ -308,30 +320,30 @@
 <body>
 
 <div class="app">
-  <div>
-    <h1>Мнемо-сетка <span>5×5</span></h1>
-
-    <div class="view-controls">
-      <button id="viewToggleBtn" class="tool-btn">⊞ Показать всё</button>
-      <div id="carouselNav" class="carousel-nav visible">
-        <button id="prevCellBtn" class="nav-btn" aria-label="Предыдущая клетка">←</button>
-        <span id="currentCellLabel" title="Клик — перейти к клетке по номеру">1 / 25</span>
-        <button id="nextCellBtn" class="nav-btn" aria-label="Следующая клетка">→</button>
-      </div>
-      <span class="view-hint">Space / ← → — переключение клеток</span>
-    </div>
-
-    <div id="grid" class="grid carousel"></div>
-
-    <div class="tools">
-      <div class="tool-group" id="colors"></div>
-      <div class="tool-group" id="sizes"></div>
-      <button class="tool-btn" id="eraserBtn">Ластик</button>
-      <button class="tool-btn" id="clearAllBtn">Очистить всё</button>
-    </div>
-  </div>
+  <h1>Мнемо-сетка <span>5×5</span></h1>
 
   <aside class="panel" id="panel"></aside>
+
+  <div class="view-controls">
+    <button id="viewToggleBtn" class="tool-btn">⊞ Показать всё</button>
+    <div id="carouselNav" class="carousel-nav visible">
+      <button id="prevCellBtn" class="nav-btn" aria-label="Предыдущая клетка">←</button>
+      <span id="currentCellLabel" title="Клик — перейти к клетке по номеру">1 / 25</span>
+      <button id="nextCellBtn" class="nav-btn" aria-label="Следующая клетка">→</button>
+    </div>
+    <span class="view-hint">Space / ← → — переключение клеток</span>
+  </div>
+
+  <div class="carousel-stage" id="carouselStage">
+    <div id="grid" class="grid carousel"></div>
+  </div>
+
+  <div class="tools">
+    <div class="tool-group" id="colors"></div>
+    <div class="tool-group" id="sizes"></div>
+    <button class="tool-btn" id="eraserBtn">Ластик</button>
+    <button class="tool-btn" id="clearAllBtn">Очистить всё</button>
+  </div>
 </div>
 
 <script src="https://js.puter.com/v2/"></script>
@@ -400,11 +412,9 @@ const state = {
   auto: {},
   manual: {},
   pauseMs: 250,
-
   viewMode: 'carousel',
   currentIdx: 0,
-
-  ttsEngine: 'browser'   // 'browser' | 'puter'
+  ttsEngine: 'browser'
 };
 
 let WORDS = [];
@@ -458,7 +468,7 @@ function buildGrid(){
 }
 
 /* =========================================================
-   Вид: карусель / сетка
+   Вид
    ========================================================= */
 function updateGridLayout(){
   gridEl.classList.toggle('carousel', state.viewMode === 'carousel');
@@ -718,7 +728,7 @@ async function loadWords(){
 }
 
 /* =========================================================
-   Озвучка: браузерная (Web Speech) + опционально Puter.js
+   Озвучка
    ========================================================= */
 let voices = [];
 if ('speechSynthesis' in window){
@@ -809,7 +819,7 @@ async function speakRound(){
 }
 
 /* =========================================================
-   Проверка ответов
+   Проверка
    ========================================================= */
 function norm(s){
   return String(s || '').toLowerCase().replace(/ё/g, 'е').replace(/[^а-яa-z0-9]/g, '');
@@ -847,7 +857,7 @@ function escapeHtml(s){
 }
 
 /* =========================================================
-   Логика игры
+   Логика
    ========================================================= */
 function startRound(seed){
   if (!WORDS.length) return;
@@ -866,6 +876,7 @@ function startRound(seed){
   state.auto = {};
   state.manual = {};
   state.phase = 'listening';
+  state.viewMode = 'carousel';
   state.currentIdx = 0;
 
   clearAllCells();
@@ -882,7 +893,10 @@ function toRecall(){
   state.auto = {};
   state.manual = {};
   state.phase = 'recall';
+  state.viewMode = 'carousel';
+  state.currentIdx = 0;
   buildRecallInputs();
+  updateGridLayout();
   renderPanel();
 }
 
@@ -894,9 +908,11 @@ function checkAnswers(){
   });
   state.manual = {};
   state.phase = 'result';
+  state.viewMode = 'grid';
 
   clearSlots();
   renderOverlays();
+  updateGridLayout();
   renderPanel();
 }
 
@@ -960,7 +976,7 @@ function updateRecallProgress(){
 }
 
 /* =========================================================
-   Подсветка клеток
+   Подсветка
    ========================================================= */
 function renderOverlays(){
   gridEl.classList.toggle('result-mode', state.phase === 'result');
@@ -1009,8 +1025,11 @@ function renderPanel(){
 }
 
 function pauseControlHtml(){
-  return `<label class="setting">Пауза между словами
-    <input id="pauseInput" type="number" min="0" max="3000" step="50" value="${state.pauseMs}"> мс</label>`;
+  return `<label class="setting">Пауза
+    <span style="display:flex;align-items:center;gap:4px">
+      <input id="pauseInput" type="number" min="0" max="3000" step="50" value="${state.pauseMs}"> мс
+    </span>
+  </label>`;
 }
 function attachPauseControl(){
   const inp = document.getElementById('pauseInput');
@@ -1024,19 +1043,16 @@ function attachPauseControl(){
 }
 
 function ttsControlHtml(){
-  return `
-    <label class="setting">Озвучка
-      <select id="ttsSelect">
-        <option value="browser" ${state.ttsEngine === 'browser' ? 'selected' : ''}>
-          Браузерная (без входа)
-        </option>
-        <option value="puter" ${state.ttsEngine === 'puter' ? 'selected' : ''} ${!puterAvailable ? 'disabled' : ''}>
-          Puter.js — нейро${puterAvailable ? ' (нужен вход)' : ' (недоступно)'}
-        </option>
-      </select>
-    </label>
-    <div class="tts-hint" id="ttsHint"></div>
-  `;
+  return `<label class="setting">Озвучка
+    <select id="ttsSelect">
+      <option value="browser" ${state.ttsEngine === 'browser' ? 'selected' : ''}>
+        Браузерная
+      </option>
+      <option value="puter" ${state.ttsEngine === 'puter' ? 'selected' : ''} ${!puterAvailable ? 'disabled' : ''}>
+        Puter.js${puterAvailable ? ' (вход)' : ' (нет)'}
+      </option>
+    </select>
+  </label>`;
 }
 function attachTtsControl(){
   const sel = document.getElementById('ttsSelect');
@@ -1046,13 +1062,13 @@ function attachTtsControl(){
   const updateHint = () => {
     if (!hint) return;
     if (state.ttsEngine === 'browser'){
-      hint.textContent = 'Стандартный голос браузера. Работает сразу, без регистрации. Качество зависит от системы — лучше всего в Edge/Chrome.';
+      hint.textContent = 'Стандартный голос браузера. Без регистрации. Лучше всего работает в Edge/Chrome.';
     } else if (!puterAvailable){
       hint.textContent = 'Puter.js не загрузился. Используется браузерная озвучка.';
     } else if (puterFailed){
-      hint.textContent = 'Puter.js не сработал (возможно, вход отменён). Дальше — браузерная озвучка.';
+      hint.textContent = 'Puter.js не сработал. Дальше — браузерная озвучка.';
     } else {
-      hint.textContent = 'Puter.js (Amazon Polly). При первом использовании попросит войти — можно отменить, тогда останется браузерная озвучка.';
+      hint.textContent = 'Puter.js (Amazon Polly). При первом слове попросит войти — можно отменить, тогда останется браузерная.';
     }
   };
   updateHint();
@@ -1068,13 +1084,13 @@ function seedBoxHtml(){
   return `
     <div class="seed-box">
       <label class="setting">Сид раунда
-        <input id="seedInput" type="text" value="${escapeHtml(state.seed)}" autocomplete="off" spellcheck="false">
+        <input id="seedInput" type="text" value="${escapeHtml(state.seed)}" autocomplete="off" spellcheck="false" style="width:130px;text-align:left">
       </label>
       <div class="seed-actions">
         <button class="secondary" id="generateSeedBtn" type="button">🎲 Случайный</button>
         <button class="secondary" id="copySeedBtn" type="button">📋 Скопировать</button>
       </div>
-      <small class="seed-hint">С этим же сидом друг сыграет тот же раунд: те же 25 слов и те же 10 номеров.</small>
+      <small class="seed-hint">Тот же сид → тот же раунд у друга (те же 25 слов и те же 10 номеров).</small>
     </div>
   `;
 }
@@ -1105,7 +1121,7 @@ function attachSeedControls(){
 }
 
 function seedDisplayHtml(){
-  return `<div class="seed-display">Сид раунда: <code>${escapeHtml(state.seed)}</code></div>`;
+  return `<div class="seed-display">Сид: <code>${escapeHtml(state.seed)}</code></div>`;
 }
 
 function renderIdle(){
@@ -1114,9 +1130,9 @@ function renderIdle(){
       <h2>Не удалось загрузить словарь</h2>
       <div class="error-box">
         <p><b>${escapeHtml(wordsError)}</b></p>
-        <p>Убедитесь, что файл <code>words.json</code> лежит рядом с <code>index.html</code>.</p>
-        <p>Локально <code>fetch()</code> не работает по <code>file://</code> — используйте локальный сервер
-           (Live Server в VS Code или <code>python -m http.server</code>) либо откройте на GitHub Pages.</p>
+        <p>Файл <code>words.json</code> должен лежать рядом с <code>index.html</code>.
+           По <code>file://</code> fetch не работает — откройте через локальный сервер
+           или GitHub Pages.</p>
       </div>
     `;
     return;
@@ -1128,19 +1144,26 @@ function renderIdle(){
 
   panelEl.innerHTML = `
     <h2>Готов?</h2>
-    <p class="muted">Правила:</p>
-    <p>
-      1. Жми «Начать раунд».<br>
-      2. Комп называет <b>25 слов</b> — по одному на клетку (1…25).<br>
-      3. Пока он говорит — <b>рисуй подсказки</b> в клетках.<br>
-      4. Потом покажут <b>10 случайных номеров</b> — впиши слова прямо поверх клеток.
+    <p class="muted" style="font-size:12px;margin:0 0 8px">
+      25 слов → рисуешь ассоциации в клетках → 10 номеров на проверку.
     </p>
-    ${ttsControlHtml()}
-    ${pauseControlHtml()}
+    <div class="panel-controls">
+      ${ttsControlHtml()}
+      ${pauseControlHtml()}
+    </div>
+    <div class="tts-hint" id="ttsHint"></div>
     ${seedBoxHtml()}
-    <p class="muted">Слов в словаре: <b>${WORDS.length}</b></p>
     <button class="primary" id="startBtn">▶ Начать раунд</button>
-    <small>Совет: рисуй ассоциации, а не сами предметы — так запоминается лучше.</small>
+    <details class="fallback">
+      <summary>Правила полностью</summary>
+      <p style="margin-top:8px">
+        1. Жми «Начать раунд».<br>
+        2. Комп называет 25 слов — по одному на клетку (1…25).<br>
+        3. Пока он говорит — рисуй подсказки в клетках.<br>
+        4. Потом покажут 10 случайных номеров — впиши слова поверх клеток.
+      </p>
+      <p class="muted">Слов в словаре: <b>${WORDS.length}</b></p>
+    </details>
   `;
   attachTtsControl();
   attachPauseControl();
@@ -1158,10 +1181,12 @@ function renderListening(){
   const cloud = state.words.map((w, i) => `<span><b>${i + 1}</b>${escapeHtml(w)}</span>`).join('');
   panelEl.innerHTML = `
     <h2>Слушай и рисуй</h2>
-    <p class="muted">Слова идут по порядку. Переключай клетки <b>пробелом</b>, стрелками или кликом по краям.</p>
     <div class="speech-status" id="speechStatus">0 / ${N}</div>
-    ${ttsControlHtml()}
-    ${pauseControlHtml()}
+    <div class="panel-controls">
+      ${ttsControlHtml()}
+      ${pauseControlHtml()}
+    </div>
+    <div class="tts-hint" id="ttsHint"></div>
     <button class="primary" id="toRecallBtn">Готово → к проверке</button>
     <button class="secondary" id="replayBtn">🔊 Повторить</button>
     <button class="secondary" id="stopBtn">⏹ Стоп</button>
@@ -1181,7 +1206,9 @@ function renderListening(){
 function renderRecall(){
   panelEl.innerHTML = `
     <h2>Вспомни слова</h2>
-    <p class="muted">Смотри на рисунки и впиши слова поверх клеток. Space / ← → — навигация, Enter — к следующему полю.</p>
+    <p class="muted" style="font-size:12px;margin:0 0 8px">
+      Смотри на рисунки и впиши слова поверх клеток. Space / ← → — навигация, Enter — к следующему полю.
+    </p>
     <div class="recall-progress" id="recallProgress"></div>
     <button class="primary" id="checkBtn">Проверить</button>
     ${seedDisplayHtml()}
@@ -1213,18 +1240,17 @@ function renderResult(){
   panelEl.innerHTML = `
     <h2>Результат</h2>
     <div class="score">${score} <small>из ${total}</small></div>
-    <p class="muted" style="font-size:13px">Клик по строке или по клетке — вручную исправить ✓/✗.</p>
+    <p class="muted" style="font-size:12px;margin:0 0 8px">
+      Клик по строке или по клетке — вручную исправить ✓/✗.
+    </p>
     <div>${rows}</div>
-    ${ttsControlHtml()}
     ${seedBoxHtml()}
     <button class="primary" id="startBtn">▶ Новый раунд</button>
-    <small>Оставь тот же сид, чтобы переиграть тот же раунд, или нажми 🎲 для нового.</small>
     <details class="fallback">
       <summary>Показать все 25 слов раунда</summary>
       <div class="wordcloud">${cloud}</div>
     </details>
   `;
-  attachTtsControl();
   attachSeedControls();
 
   document.getElementById('startBtn').onclick = () => {
