@@ -27,6 +27,33 @@
   .muted{color:#93a0c4}
   small{color:#8492b8}
 
+  /* ------- управление видом ------- */
+  .view-controls{
+    display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+    margin-bottom:12px;
+  }
+  .carousel-nav{
+    display:none;align-items:center;gap:6px;
+    background:rgba(255,255,255,.04);border:1px solid #2a3358;
+    border-radius:10px;padding:4px 6px;
+  }
+  .carousel-nav.visible{display:flex}
+  .nav-btn{
+    width:32px;height:32px;border-radius:8px;
+    background:#1b2240;border:1px solid #39456f;color:#dfe6ff;
+    font:inherit;font-size:16px;cursor:pointer;padding:0;
+    transition:.15s;
+  }
+  .nav-btn:hover{background:#25305a}
+  .nav-btn:disabled{opacity:.3;cursor:not-allowed}
+  #currentCellLabel{
+    font-size:13px;color:#bcc8ea;font-variant-numeric:tabular-nums;
+    min-width:56px;text-align:center;padding:6px 8px;border-radius:6px;
+    cursor:pointer;user-select:none;transition:.12s;
+  }
+  #currentCellLabel:hover{background:rgba(110,168,255,.12);color:#e8ecff}
+  .view-hint{font-size:12px;color:#7c8db8}
+
   /* ------- сетка ------- */
   .grid{
     display:grid;
@@ -35,6 +62,60 @@
     width:100%;
     max-width:780px;
   }
+
+  /* ------- карусель (один квадрат) ------- */
+  .grid.carousel{
+    display:block;
+    position:relative;
+    aspect-ratio:1/1;
+    max-width:900px;
+    overflow:visible;
+  }
+  .grid.carousel .cell-wrap{
+    position:absolute;
+    top:50%;
+    transform:translateY(-50%);
+    width:84%;
+    transition:
+      left 0.28s cubic-bezier(.4,0,.2,1),
+      opacity 0.28s ease,
+      filter 0.28s ease;
+    cursor:pointer;
+  }
+  .grid.carousel .cell-wrap.current{
+    left:8%;
+    z-index:3;
+    cursor:crosshair;
+  }
+  .grid.carousel .cell-wrap.prev{
+    left:-76%;
+    z-index:1;
+    opacity:0.55;
+    filter:brightness(0.85);
+  }
+  .grid.carousel .cell-wrap.next{
+    left:92%;
+    z-index:1;
+    opacity:0.55;
+    filter:brightness(0.85);
+  }
+  .grid.carousel .cell-wrap.hidden{
+    display:none;
+  }
+  .grid.carousel .cell-wrap:not(.current) canvas{
+    pointer-events:none;
+  }
+  .grid.carousel .cell-wrap:not(.current) .answer-slot{
+    pointer-events:none;
+    opacity:0.4;
+  }
+  .grid.carousel .cell-wrap.current .cell{
+    box-shadow:
+      0 10px 30px rgba(0,0,0,.55),
+      0 0 0 2px rgba(110,168,255,.65),
+      inset 0 0 0 1px rgba(0,0,0,.06);
+  }
+
   .cell-wrap{min-width:0}
   .cell{
     position:relative;aspect-ratio:1/1;border-radius:10px;overflow:hidden;background:#fff;
@@ -47,8 +128,9 @@
     pointer-events:none;user-select:none;z-index:3;
   }
   .grid.result-mode canvas{cursor:pointer}
+  .grid.carousel.result-mode .cell-wrap.current canvas{cursor:pointer}
 
-  /* ------- поле ввода ПОВЕРХ клетки ------- */
+  /* ------- поле ввода ------- */
   .answer-slot{
     position:absolute;left:8px;right:8px;bottom:8px;z-index:5;
     display:none;
@@ -94,6 +176,11 @@
   .overlay.bad{background:rgba(239,68,68,.72);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4);padding:4px}
   .overlay.neutral{background:rgba(250,204,21,.68);color:#3b2f00}
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+  .grid.carousel .overlay .mark{font-size:36px}
+  .grid.carousel .overlay .word{font-size:22px}
+  .grid.carousel .overlay .wrong-answer{font-size:16px}
+  .grid.carousel .overlay .correct-answer{font-size:20px}
 
   /* ------- инструменты ------- */
   .tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}
@@ -153,6 +240,19 @@
   }
   .setting input:focus{border-color:#6ea8ff;box-shadow:0 0 0 3px rgba(110,168,255,.18)}
 
+  .setting select{
+    font:inherit;font-size:13px;padding:6px 8px;border-radius:8px;
+    background:#0e1428;border:1px solid #39456f;color:#e8ecff;outline:none;
+    cursor:pointer;min-width:180px;
+  }
+  .setting select:focus{border-color:#6ea8ff;box-shadow:0 0 0 3px rgba(110,168,255,.18)}
+  .setting select option{background:#0e1428;color:#e8ecff}
+
+  .tts-hint{
+    margin:-4px 0 10px;font-size:12px;color:#8ba0cf;line-height:1.4;
+    padding:0 2px;
+  }
+
   .seed-box{
     margin:12px 0;padding:12px;background:rgba(110,168,255,.06);
     border:1px solid rgba(110,168,255,.22);border-radius:12px;
@@ -210,7 +310,19 @@
 <div class="app">
   <div>
     <h1>Мнемо-сетка <span>5×5</span></h1>
-    <div id="grid" class="grid"></div>
+
+    <div class="view-controls">
+      <button id="viewToggleBtn" class="tool-btn">⊞ Показать всё</button>
+      <div id="carouselNav" class="carousel-nav visible">
+        <button id="prevCellBtn" class="nav-btn" aria-label="Предыдущая клетка">←</button>
+        <span id="currentCellLabel" title="Клик — перейти к клетке по номеру">1 / 25</span>
+        <button id="nextCellBtn" class="nav-btn" aria-label="Следующая клетка">→</button>
+      </div>
+      <span class="view-hint">Space / ← → — переключение клеток</span>
+    </div>
+
+    <div id="grid" class="grid carousel"></div>
+
     <div class="tools">
       <div class="tool-group" id="colors"></div>
       <div class="tool-group" id="sizes"></div>
@@ -265,7 +377,6 @@ function makeRng(seedStr){
   const h = hashString(String(seedStr || 'default'));
   const r = mulberry32(h);
   return {
-    int: (max) => Math.floor(r() * max),
     shuffle: (arr) => {
       const a = arr.slice();
       for (let i = a.length - 1; i > 0; i--){
@@ -288,7 +399,12 @@ const state = {
   answers: {},
   auto: {},
   manual: {},
-  pauseMs: 2000
+  pauseMs: 250,
+
+  viewMode: 'carousel',
+  currentIdx: 0,
+
+  ttsEngine: 'browser'   // 'browser' | 'puter'
 };
 
 let WORDS = [];
@@ -342,6 +458,73 @@ function buildGrid(){
 }
 
 /* =========================================================
+   Вид: карусель / сетка
+   ========================================================= */
+function updateGridLayout(){
+  gridEl.classList.toggle('carousel', state.viewMode === 'carousel');
+
+  cells.forEach(c => {
+    c.wrap.classList.remove('current', 'prev', 'next', 'hidden');
+  });
+
+  if (state.viewMode === 'carousel'){
+    cells.forEach((c, i) => {
+      if (i === state.currentIdx) c.wrap.classList.add('current');
+      else if (i === state.currentIdx - 1) c.wrap.classList.add('prev');
+      else if (i === state.currentIdx + 1) c.wrap.classList.add('next');
+      else c.wrap.classList.add('hidden');
+    });
+  }
+
+  const nav = document.getElementById('carouselNav');
+  if (nav) nav.classList.toggle('visible', state.viewMode === 'carousel');
+
+  const hint = document.querySelector('.view-hint');
+  if (hint) hint.style.display = state.viewMode === 'carousel' ? '' : 'none';
+
+  const label = document.getElementById('currentCellLabel');
+  if (label) label.textContent = `${state.currentIdx + 1} / ${N}`;
+
+  const btn = document.getElementById('viewToggleBtn');
+  if (btn) btn.textContent = state.viewMode === 'carousel' ? '⊞ Показать всё' : '⊡ По одному';
+
+  const prevBtn = document.getElementById('prevCellBtn');
+  const nextBtn = document.getElementById('nextCellBtn');
+  if (prevBtn) prevBtn.disabled = state.currentIdx <= 0;
+  if (nextBtn) nextBtn.disabled = state.currentIdx >= N - 1;
+}
+
+function goToCell(idx){
+  if (idx < 0 || idx >= N) return;
+  state.currentIdx = idx;
+  updateGridLayout();
+}
+
+function navigateNext(){
+  if (state.currentIdx >= N - 1) return;
+  const wasInInput = document.activeElement?.tagName === 'INPUT';
+  state.currentIdx++;
+  updateGridLayout();
+  if (wasInInput){
+    const inp = cells[state.currentIdx].slot.querySelector('input');
+    if (inp) inp.focus();
+    else document.activeElement?.blur();
+  }
+}
+
+function navigatePrev(){
+  if (state.currentIdx <= 0) return;
+  const wasInInput = document.activeElement?.tagName === 'INPUT';
+  state.currentIdx--;
+  updateGridLayout();
+  if (wasInInput){
+    const inp = cells[state.currentIdx].slot.querySelector('input');
+    if (inp) inp.focus();
+    else document.activeElement?.blur();
+  }
+}
+
+/* =========================================================
    Рисование
    ========================================================= */
 function cellPos(e, cv){
@@ -360,6 +543,10 @@ gridEl.addEventListener('pointerdown', (e) => {
   if (state.phase !== 'idle' && state.phase !== 'listening') return;
   const cv = e.target.closest('canvas');
   if (!cv) return;
+  if (state.viewMode === 'carousel'){
+    const wrap = cv.closest('.cell-wrap');
+    if (!wrap || !wrap.classList.contains('current')) return;
+  }
   e.preventDefault();
   drawing = true;
   curCanvas = cv;
@@ -400,14 +587,24 @@ gridEl.addEventListener('dblclick', (e) => {
 });
 
 gridEl.addEventListener('click', (e) => {
-  if (state.phase !== 'result') return;
   const wrap = e.target.closest('.cell-wrap');
   if (!wrap) return;
-  const n = +wrap.dataset.i + 1;
-  if (!state.recall.includes(n)) return;
-  state.manual[n] = !isRight(n);
-  renderOverlays();
-  renderPanel();
+
+  if (state.viewMode === 'carousel'){
+    if (wrap.classList.contains('prev') || wrap.classList.contains('next')){
+      const i = cells.findIndex(c => c.wrap === wrap);
+      goToCell(i);
+      return;
+    }
+  }
+
+  if (state.phase === 'result'){
+    const n = +wrap.dataset.i + 1;
+    if (!state.recall.includes(n)) return;
+    state.manual[n] = !isRight(n);
+    renderOverlays();
+    renderPanel();
+  }
 });
 
 function clearCell(i){
@@ -465,6 +662,45 @@ function updateToolUI(){
 }
 
 /* =========================================================
+   Кнопки вида
+   ========================================================= */
+document.getElementById('viewToggleBtn').onclick = () => {
+  state.viewMode = state.viewMode === 'carousel' ? 'grid' : 'carousel';
+  updateGridLayout();
+};
+document.getElementById('prevCellBtn').onclick = navigatePrev;
+document.getElementById('nextCellBtn').onclick = navigateNext;
+document.getElementById('currentCellLabel').onclick = () => {
+  const v = prompt(`Перейти к клетке (1–${N}):`, state.currentIdx + 1);
+  if (v === null) return;
+  const n = parseInt(v, 10);
+  if (!isNaN(n) && n >= 1 && n <= N) goToCell(n - 1);
+};
+
+/* =========================================================
+   Клавиатура
+   ========================================================= */
+document.addEventListener('keydown', (e) => {
+  if (state.viewMode !== 'carousel') return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+  const inAnswerInput = !!e.target.closest?.('.answer-slot');
+  const inOtherInput  = (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') && !inAnswerInput;
+
+  if (inOtherInput) return;
+
+  if (e.key === ' '){
+    e.preventDefault();
+    navigateNext();
+    return;
+  }
+  if (inAnswerInput) return;
+
+  if (e.key === 'ArrowRight'){ e.preventDefault(); navigateNext(); }
+  else if (e.key === 'ArrowLeft'){ e.preventDefault(); navigatePrev(); }
+});
+
+/* =========================================================
    Загрузка словаря
    ========================================================= */
 async function loadWords(){
@@ -482,7 +718,7 @@ async function loadWords(){
 }
 
 /* =========================================================
-   Озвучка
+   Озвучка: браузерная (Web Speech) + опционально Puter.js
    ========================================================= */
 let voices = [];
 if ('speechSynthesis' in window){
@@ -494,7 +730,7 @@ function getRuVoice(){
   return voices.find(v => /^ru/i.test(v.lang)) || voices.find(v => /ru/i.test(v.lang)) || null;
 }
 
-const usePuter = typeof puter !== 'undefined' && puter.ai && typeof puter.ai.txt2speech === 'function';
+const puterAvailable = typeof puter !== 'undefined' && puter.ai && typeof puter.ai.txt2speech === 'function';
 let puterFailed = false;
 let currentAudio = null;
 let dictationAbort = false;
@@ -508,25 +744,8 @@ function stopSpeech(){
   if (currentAudio){ try { currentAudio.pause(); } catch(_) {} currentAudio = null; }
   if ('speechSynthesis' in window) window.speechSynthesis.cancel();
 }
-async function playWord(text){
-  if (usePuter && !puterFailed){
-    try {
-      const audio = await puter.ai.txt2speech(text, 'ru-RU');
-      currentAudio = audio;
-      await audio.play();
-      await new Promise(resolve => {
-        const done = () => { audio.removeEventListener('ended', done); audio.removeEventListener('pause', done); resolve(); };
-        audio.addEventListener('ended', done);
-        audio.addEventListener('pause', done);
-        if (audio.ended) done();
-      });
-      if (currentAudio === audio) currentAudio = null;
-      return;
-    } catch(e){
-      console.warn('Puter TTS не сработал, переключаюсь на Web Speech:', e);
-      puterFailed = true;
-    }
-  }
+
+function browserSpeak(text){
   return new Promise(resolve => {
     if (!('speechSynthesis' in window)) return resolve();
     const u = new SpeechSynthesisUtterance(text);
@@ -542,13 +761,43 @@ async function playWord(text){
   });
 }
 
+async function playWord(text){
+  if (state.ttsEngine === 'puter' && puterAvailable && !puterFailed){
+    try {
+      const audio = await puter.ai.txt2speech(text, 'ru-RU');
+      currentAudio = audio;
+      await audio.play();
+      await new Promise(resolve => {
+        const done = () => {
+          audio.removeEventListener('ended', done);
+          audio.removeEventListener('pause', done);
+          resolve();
+        };
+        audio.addEventListener('ended', done);
+        audio.addEventListener('pause', done);
+        if (audio.ended) done();
+      });
+      if (currentAudio === audio) currentAudio = null;
+      return;
+    } catch(e){
+      console.warn('Puter TTS не сработал:', e);
+      puterFailed = true;
+      setSpeechStatus('Puter недоступен — дальше озвучиваю браузерным голосом');
+    }
+  }
+  return browserSpeak(text);
+}
+
 async function speakRound(){
   stopSpeech();
   dictationAbort = false;
-  if (!usePuter && !('speechSynthesis' in window)){
+
+  const useBrowser = state.ttsEngine === 'browser' || puterFailed || !puterAvailable;
+  if (useBrowser && !('speechSynthesis' in window)){
     setSpeechStatus('⚠ Браузер не поддерживает озвучку. Используй «Показать слова».');
     return;
   }
+
   for (let i = 0; i < N; i++){
     if (dictationAbort) return;
     setSpeechStatus(`${i + 1} / ${N}`);
@@ -598,7 +847,7 @@ function escapeHtml(s){
 }
 
 /* =========================================================
-   Логика игры (с сидом)
+   Логика игры
    ========================================================= */
 function startRound(seed){
   if (!WORDS.length) return;
@@ -608,10 +857,8 @@ function startRound(seed){
 
   const rng = makeRng(seed);
 
-  // 25 слов
   state.words = rng.shuffle(WORDS).slice(0, N);
 
-  // 10 номеров
   const allNums = Array.from({ length: N }, (_, i) => i + 1);
   state.recall = rng.shuffle(allNums).slice(0, RECALL).sort((a, b) => a - b);
 
@@ -619,10 +866,12 @@ function startRound(seed){
   state.auto = {};
   state.manual = {};
   state.phase = 'listening';
+  state.currentIdx = 0;
 
   clearAllCells();
   clearSlots();
   renderOverlays();
+  updateGridLayout();
   renderPanel();
   speakRound();
 }
@@ -680,6 +929,12 @@ function buildRecallInputs(){
     inp.addEventListener('input', () => {
       state.answers[n] = inp.value;
       updateRecallProgress();
+    });
+    inp.addEventListener('focus', () => {
+      if (state.viewMode === 'carousel' && state.currentIdx !== n - 1){
+        state.currentIdx = n - 1;
+        updateGridLayout();
+      }
     });
     inp.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter') return;
@@ -768,6 +1023,47 @@ function attachPauseControl(){
   inp.addEventListener('blur', () => { inp.value = state.pauseMs; });
 }
 
+function ttsControlHtml(){
+  return `
+    <label class="setting">Озвучка
+      <select id="ttsSelect">
+        <option value="browser" ${state.ttsEngine === 'browser' ? 'selected' : ''}>
+          Браузерная (без входа)
+        </option>
+        <option value="puter" ${state.ttsEngine === 'puter' ? 'selected' : ''} ${!puterAvailable ? 'disabled' : ''}>
+          Puter.js — нейро${puterAvailable ? ' (нужен вход)' : ' (недоступно)'}
+        </option>
+      </select>
+    </label>
+    <div class="tts-hint" id="ttsHint"></div>
+  `;
+}
+function attachTtsControl(){
+  const sel = document.getElementById('ttsSelect');
+  const hint = document.getElementById('ttsHint');
+  if (!sel) return;
+
+  const updateHint = () => {
+    if (!hint) return;
+    if (state.ttsEngine === 'browser'){
+      hint.textContent = 'Стандартный голос браузера. Работает сразу, без регистрации. Качество зависит от системы — лучше всего в Edge/Chrome.';
+    } else if (!puterAvailable){
+      hint.textContent = 'Puter.js не загрузился. Используется браузерная озвучка.';
+    } else if (puterFailed){
+      hint.textContent = 'Puter.js не сработал (возможно, вход отменён). Дальше — браузерная озвучка.';
+    } else {
+      hint.textContent = 'Puter.js (Amazon Polly). При первом использовании попросит войти — можно отменить, тогда останется браузерная озвучка.';
+    }
+  };
+  updateHint();
+
+  sel.addEventListener('change', () => {
+    state.ttsEngine = sel.value;
+    if (state.ttsEngine === 'puter') puterFailed = false;
+    updateHint();
+  });
+}
+
 function seedBoxHtml(){
   return `
     <div class="seed-box">
@@ -782,7 +1078,6 @@ function seedBoxHtml(){
     </div>
   `;
 }
-
 function attachSeedControls(){
   const inp = document.getElementById('seedInput');
   const gen = document.getElementById('generateSeedBtn');
@@ -794,7 +1089,6 @@ function attachSeedControls(){
     inp.focus();
     inp.select();
   };
-
   copy.onclick = async () => {
     const v = inp.value.trim();
     const orig = copy.textContent;
@@ -802,7 +1096,7 @@ function attachSeedControls(){
       await navigator.clipboard.writeText(v);
       copy.textContent = '✓ Скопировано';
       setTimeout(() => { copy.textContent = orig; }, 1500);
-    } catch(e){
+    } catch(_){
       inp.select();
       try { document.execCommand('copy'); copy.textContent = '✓ Скопировано'; } catch(_) {}
       setTimeout(() => { copy.textContent = orig; }, 1500);
@@ -841,13 +1135,14 @@ function renderIdle(){
       3. Пока он говорит — <b>рисуй подсказки</b> в клетках.<br>
       4. Потом покажут <b>10 случайных номеров</b> — впиши слова прямо поверх клеток.
     </p>
+    ${ttsControlHtml()}
     ${pauseControlHtml()}
     ${seedBoxHtml()}
-    <p class="muted">Слов в словаре: <b>${WORDS.length}</b>
-      ${usePuter ? ' · 🎙 нейро-озвучка' : ''}</p>
+    <p class="muted">Слов в словаре: <b>${WORDS.length}</b></p>
     <button class="primary" id="startBtn">▶ Начать раунд</button>
     <small>Совет: рисуй ассоциации, а не сами предметы — так запоминается лучше.</small>
   `;
+  attachTtsControl();
   attachPauseControl();
   attachSeedControls();
 
@@ -863,8 +1158,9 @@ function renderListening(){
   const cloud = state.words.map((w, i) => `<span><b>${i + 1}</b>${escapeHtml(w)}</span>`).join('');
   panelEl.innerHTML = `
     <h2>Слушай и рисуй</h2>
-    <p class="muted">Слова идут по порядку: «один — дерево, два — монета…». Успевай рисовать в клетках.</p>
+    <p class="muted">Слова идут по порядку. Переключай клетки <b>пробелом</b>, стрелками или кликом по краям.</p>
     <div class="speech-status" id="speechStatus">0 / ${N}</div>
+    ${ttsControlHtml()}
     ${pauseControlHtml()}
     <button class="primary" id="toRecallBtn">Готово → к проверке</button>
     <button class="secondary" id="replayBtn">🔊 Повторить</button>
@@ -875,19 +1171,19 @@ function renderListening(){
       <div class="wordcloud">${cloud}</div>
     </details>
   `;
+  attachTtsControl();
+  attachPauseControl();
   document.getElementById('toRecallBtn').onclick = toRecall;
   document.getElementById('replayBtn').onclick   = speakRound;
   document.getElementById('stopBtn').onclick     = () => { stopSpeech(); setSpeechStatus('Остановлено'); };
-  attachPauseControl();
 }
 
 function renderRecall(){
   panelEl.innerHTML = `
     <h2>Вспомни слова</h2>
-    <p class="muted">Смотри на свои рисунки и впиши слова прямо поверх клеток.</p>
+    <p class="muted">Смотри на рисунки и впиши слова поверх клеток. Space / ← → — навигация, Enter — к следующему полю.</p>
     <div class="recall-progress" id="recallProgress"></div>
     <button class="primary" id="checkBtn">Проверить</button>
-    <small>Enter — следующее поле (на последнем — проверка).</small>
     ${seedDisplayHtml()}
   `;
   document.getElementById('checkBtn').onclick = checkAnswers;
@@ -917,8 +1213,9 @@ function renderResult(){
   panelEl.innerHTML = `
     <h2>Результат</h2>
     <div class="score">${score} <small>из ${total}</small></div>
-    <p class="muted" style="font-size:13px">Клик по строке или по клетке — вручную исправить ✓/✗ (защита от опечаток).</p>
+    <p class="muted" style="font-size:13px">Клик по строке или по клетке — вручную исправить ✓/✗.</p>
     <div>${rows}</div>
+    ${ttsControlHtml()}
     ${seedBoxHtml()}
     <button class="primary" id="startBtn">▶ Новый раунд</button>
     <small>Оставь тот же сид, чтобы переиграть тот же раунд, или нажми 🎲 для нового.</small>
@@ -927,6 +1224,7 @@ function renderResult(){
       <div class="wordcloud">${cloud}</div>
     </details>
   `;
+  attachTtsControl();
   attachSeedControls();
 
   document.getElementById('startBtn').onclick = () => {
@@ -956,6 +1254,7 @@ function renderResult(){
 state.seed = randomSeed();
 buildGrid();
 updateToolUI();
+updateGridLayout();
 renderPanel();
 loadWords();
 </script>
